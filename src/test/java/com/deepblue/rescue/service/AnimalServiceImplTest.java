@@ -2,7 +2,8 @@ package com.deepblue.rescue.service;
 
 import java.time.LocalDate;
 import java.util.Optional;
-
+import java.util.List;
+import com.deepblue.rescue.dto.response.AnimalResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -68,4 +69,63 @@ class AnimalServiceImplTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Animal not found: AN-999");
     }
+
+    @Test
+void shouldFindAnimalByCode() {
+    var entity = new Animal(
+            "AN-001",
+            "Turtle",
+            "Chelonia mydas",
+            AnimalSex.UNKNOWN);
+
+    var expected = new AnimalResponse(
+            1L,
+            "AN-001",
+            "Turtle",
+            "Chelonia mydas",
+            AnimalSex.UNKNOWN,
+            null,
+            "RES-001");
+
+    when(repository.findByAnimalCode("AN-001"))
+            .thenReturn(Optional.of(entity));
+    when(mapper.toResponse(entity)).thenReturn(expected);
+
+    var result = service.findByCode("AN-001");
+
+    assertThat(result).isEqualTo(expected);
+    verify(repository).findByAnimalCode("AN-001");
+    verify(mapper).toResponse(entity);
+}
+
+@Test
+void shouldFindAnimalsInRehabilitation() {
+    var entity = new Animal(
+            "AN-001",
+            "Turtle",
+            "Chelonia mydas",
+            AnimalSex.UNKNOWN);
+
+    var expected = new AnimalResponse(
+            1L,
+            "AN-001",
+            "Turtle",
+            "Chelonia mydas",
+            AnimalSex.UNKNOWN,
+            null,
+            "RES-001");
+
+    when(repository.findByRescueCaseStatus(
+            RescueStatus.IN_REHABILITATION))
+            .thenReturn(List.of(entity));
+
+    when(mapper.toResponse(entity)).thenReturn(expected);
+
+    var result = service.findAnimalsInRehabilitation();
+
+    assertThat(result).containsExactly(expected);
+    verify(repository).findByRescueCaseStatus(
+            RescueStatus.IN_REHABILITATION);
+    verify(mapper).toResponse(entity);
+}
 }

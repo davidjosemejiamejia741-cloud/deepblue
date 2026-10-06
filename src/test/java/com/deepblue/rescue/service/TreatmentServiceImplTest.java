@@ -3,6 +3,8 @@ package com.deepblue.rescue.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
+import com.deepblue.rescue.dto.response.TreatmentResponse;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -176,4 +178,49 @@ class TreatmentServiceImplTest {
 
         verify(repository, never()).save(any());
     }
+
+    @Test
+void shouldFindTreatmentsByAnimalCode() {
+    var animal = mock(Animal.class);
+    when(animal.getId()).thenReturn(1L);
+
+    var specialist = new Specialist(
+            "SPEC-001",
+            "Elena",
+            "Vargas",
+            "elena@example.com",
+            true);
+
+    var performedAt = LocalDateTime.of(2020, 8, 21, 9, 0);
+
+    var treatment = new Treatment(
+            animal,
+            specialist,
+            performedAt,
+            TreatmentType.WOUND_CARE,
+            "Cleaning flipper injury");
+
+    var expected = new TreatmentResponse(
+            100L,
+            "AN-001",
+            "SPEC-001",
+            performedAt,
+            TreatmentType.WOUND_CARE,
+            "Cleaning flipper injury");
+
+    when(animalRepository.findByAnimalCode("AN-001"))
+            .thenReturn(Optional.of(animal));
+
+    when(repository.findByAnimalIdOrderByPerformedAtAsc(1L))
+            .thenReturn(List.of(treatment));
+
+    when(mapper.toResponse(treatment)).thenReturn(expected);
+
+    var result = service.findByAnimalCode("AN-001");
+
+    assertThat(result).containsExactly(expected);
+    verify(animalRepository).findByAnimalCode("AN-001");
+    verify(repository).findByAnimalIdOrderByPerformedAtAsc(1L);
+    verify(mapper).toResponse(treatment);
+}
 }
