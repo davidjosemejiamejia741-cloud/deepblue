@@ -52,6 +52,49 @@ public class RescueCaseServiceImpl
                 .map(mapper::toResponse)
                 .toList();
     }
-    
+
+@Override
+@Transactional
+public RescueCaseResponse changeStatus(
+        String caseCode,
+        ChangeRescueStatusRequest request) {
+
+    if (request == null || request.status() == null) {
+        throw new BusinessRuleException(
+                "A rescue status is required");
+    }
+
+    var rescueCase = repository.findByCaseCode(caseCode)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                    "Rescue case not found: " + caseCode));
+
+    boolean allowed = switch (rescueCase.getStatus()) {
+        case ADMITTED ->
+                request.status() == RescueStatus.UNDER_EVALUATION;
+
+        case UNDER_EVALUATION ->
+                request.status() == RescueStatus.IN_REHABILITATION;
+
+        case IN_REHABILITATION ->
+                request.status() == RescueStatus.READY_FOR_RELEASE;
+
+        case READY_FOR_RELEASE ->
+                request.status() == RescueStatus.RELEASED;
+
+        case RELEASED ->
+                request.status() == RescueStatus.CLOSED;
+
+        case CLOSED -> false;
+    };
+
+    if (!allowed) {
+        throw new BusinessRuleException(
+                "Invalid status transition");
+    }
+
+    rescueCase.setStatus(request.status());
+
+    return mapper.toResponse(repository.save(rescueCase));
 }
 
+}
